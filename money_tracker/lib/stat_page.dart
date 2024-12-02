@@ -1,98 +1,81 @@
+import 'dart:convert';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:money_tracker/home_page.dart';
 import 'package:money_tracker/profile_page.dart';
 
-class StatisticsPage extends StatefulWidget 
-{
-  final List<Map<String, String>> expenses;
-  const StatisticsPage({required this.expenses, super.key});
+class StatisticsPage extends StatefulWidget {
+  final String apiBaseUrl;
+  const StatisticsPage({required this.apiBaseUrl, super.key});
 
   @override
   StatisticsPageState createState() => StatisticsPageState();
 }
 
-class StatisticsPageState extends State<StatisticsPage> 
-{
+class StatisticsPageState extends State<StatisticsPage> {
   DateTime selectedDate = DateTime.now();
+  List<Map<String, dynamic>> categoryData = [];
+  int totalExpenses = 0;
 
-  List<Map<String, String>> getFilteredExpenses() 
-  {
-    final dateFormat = DateFormat('dd.MM.yy');
-    return widget.expenses.where((expense) 
-    {
-      return dateFormat.format(DateTime.now()) ==
-          dateFormat.format(selectedDate) &&
-          expense['date']!.startsWith(dateFormat.format(selectedDate));
-    }).toList();
-  }
+  Future<void> fetchExpenseData() async {
+    final date = DateFormat('yyyy-MM-dd').format(selectedDate);
+    final url = Uri.parse('${widget.apiBaseUrl}/api/get-expenses?date=$date');
 
-  int getTotalExpenses() 
-  {
-    return getFilteredExpenses().fold(0, (sum, expense) 
-    {
-      return sum + int.parse(expense['cost']!);
-    });
-  }
-
-  Map<String, List<Map<String, String>>> getCategoryExpenses() 
-  {
-    final filtered = getFilteredExpenses();
-    final Map<String, List<Map<String, String>>> categoryDetails = {};
-
-    for (var expense in filtered) 
-    {
-      final String category = expense['category']!;
-      if (!categoryDetails.containsKey(category)) 
-      {
-        categoryDetails[category] = [];
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          totalExpenses = data['total'] as int;
+          categoryData = (data['categories'] as List)
+              .map((category) => category as Map<String, dynamic>)
+              .toList();
+        });
+      } else {
+        throw Exception('Failed to load expense data');
       }
-      categoryDetails[category]!.add(expense);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching data: $e')),
+      );
     }
-
-    return categoryDetails;
   }
 
   @override
-  Widget build(BuildContext context) 
-  {
-    final categoryExpenses = getCategoryExpenses();
+  void initState() {
+    super.initState();
+    fetchExpenseData();
+  }
 
-    return Scaffold
-    (
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea
-      (
-        child: Padding
-        (
+      body: SafeArea(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column
-          (
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children:
-            [
-              ElevatedButton
-              (
-                style: ElevatedButton.styleFrom
-                (
+            children: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[200],
                   foregroundColor: Colors.black,
                 ),
-                onPressed: () async 
-                {
-                  final DateTime? picked = await showDatePicker
-                  (
+                onPressed: () async {
+                  final DateTime? picked = await showDatePicker(
                     context: context,
                     initialDate: selectedDate,
                     firstDate: DateTime(2000),
                     lastDate: DateTime.now(),
                   );
-                  if (picked != null) 
-                  {
-                    setState(() 
-                    {
+                  if (picked != null) {
+                    setState(() {
                       selectedDate = picked;
                     });
+                    await fetchExpenseData();
                   }
                 },
                 child: Text(DateFormat('dd.MM.yyyy').format(selectedDate)),
@@ -100,28 +83,20 @@ class StatisticsPageState extends State<StatisticsPage>
 
               const SizedBox(height: 15),
 
-              Container
-              (
+              Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration
-                (
+                decoration: BoxDecoration(
                   color: Colors.purple[100],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Column
-                (
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                  [
-                    Row
-                    (
-                      children:
-                      [
-                        Text
-                        (
-                          'Total Expenses: ${getTotalExpenses()} UAH',
-                          style: const TextStyle
-                          (
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Total Expenses: $totalExpenses UAH',
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -134,50 +109,64 @@ class StatisticsPageState extends State<StatisticsPage>
 
               const SizedBox(height: 15),
 
-              Expanded
-              (
-                child: ListView
-                (
-                  children: categoryExpenses.entries.map((entry)
-                  {
-                    final category = entry.key;
-                    final expenses = entry.value;
-                    final totalCost = expenses.fold
-                    (
-                      0,
-                      (sum, item) => sum + int.parse(item['cost']!),
-                    );
+              Expanded(
+                child: categoryData.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : PieChart(
+                        PieChartData(
+                          sections: categoryData.map((category) {
+                            final totalCost = category['data'].fold(0, (sum, item) => sum + item['cost']);
+                            final percentage = (totalCost / totalExpenses) * 100;
+                            return PieChartSectionData(
+                              title:
+                                  '${category['category']} (${percentage.toStringAsFixed(1)}%)',
+                              value: totalCost.toDouble(),
+                              color: Colors.primaries[
+                                  categoryData.indexOf(category) %
+                                      Colors.primaries.length],
+                              titleStyle: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+              ),
 
-                    return Card
-                    (
-                      shape: RoundedRectangleBorder
-                      (
+              const SizedBox(height: 15),
+
+              Expanded(
+                child: ListView(
+                  children: categoryData.map((category) {
+                    final categoryName = category['category'];
+                    final totalCost = category['data']
+                        .fold(0, (sum, item) => sum + item['cost']);
+                    final percentage =
+                        (totalCost / totalExpenses) * 100;
+
+                    return Card(
+                      shape: RoundedRectangleBorder(
                         side: BorderSide.none,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       elevation: 0,
                       margin: const EdgeInsets.symmetric(vertical: 8),
-                      child: ExpansionTile
-                      (
-                        shape: const RoundedRectangleBorder
-                        (
+                      child: ExpansionTile(
+                        shape: const RoundedRectangleBorder(
                           side: BorderSide.none,
                         ),
-                        title: Text
-                        (
-                          '$category - $totalCost UAH',
-                          style: const TextStyle
-                          (
+                        title: Text(
+                          '$categoryName - $totalCost UAH',
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        children: expenses.map((expense) 
-                        {
-                          return ListTile
-                          (
-                            title: Text(expense['description'] ?? ''),
-                            subtitle: Text('Cost: ${expense['cost']} UAH'),
+                        children: (category['data'] as List).map<Widget>((item) {
+                          return ListTile(
+                            title: Text(item['description']),
+                            subtitle: Text('Cost: ${item['cost'].toString()} UAH'),
                           );
                         }).toList(),
                       ),
@@ -189,40 +178,27 @@ class StatisticsPageState extends State<StatisticsPage>
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar
-      (
-        items: const 
-        [
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem
-          (
-            icon: Icon(Icons.bar_chart), label: 'Statistics'
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Statistics'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: 1,
         selectedItemColor: Colors.purple,
         unselectedItemColor: Colors.grey,
-        onTap: (index) 
-        {
-          if (index == 0) 
-          {
-            Navigator.push
-            (
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.push(
               context,
-              MaterialPageRoute
-              (
+              MaterialPageRoute(
                 builder: (context) => const HomePage(),
               ),
             );
-          }
-          else if (index == 2) 
-          {
-            Navigator.push
-            (
+          } else if (index == 2) {
+            Navigator.push(
               context,
-              MaterialPageRoute
-              (
+              MaterialPageRoute(
                 builder: (context) => const ProfilePage(),
               ),
             );

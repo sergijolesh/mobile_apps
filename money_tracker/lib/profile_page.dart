@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:money_tracker/home_page.dart';
-//import 'package:money_tracker/stat_page.dart';
 import 'package:money_tracker/main.dart';
+import 'package:money_tracker/stat_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ProfilePage extends StatefulWidget 
-{
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
   ProfilePageState createState() => ProfilePageState();
 }
 
-class ProfilePageState extends State<ProfilePage> 
-{
-  Future<void> _logOut() async 
-  {
+class ProfilePageState extends State<ProfilePage> {
+  Future<void> _logOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
   }
@@ -23,66 +20,49 @@ class ProfilePageState extends State<ProfilePage>
   String? username;
 
   @override
-  void initState() 
-  {
+  void initState() {
     super.initState();
     _getUserName();
   }
 
-  Future<void> _getUserName() async 
-  {
+  Future<void> _getUserName() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() 
-    {
+    setState(() {
       username = prefs.getString('username');
     });
   }
 
   @override
-  Widget build(BuildContext context) 
-  {
-    return Scaffold
-    (
-      appBar: AppBar
-      (
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
         title: const Text('Profile'),
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton
-        (
+        leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black),
           onPressed: () {},
         ),
       ),
-      body: Padding
-      (
+      body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column
-        (
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: 
-          [
-            Row
-            (
-              children:
-              [
+          children: [
+            Row(
+              children: [
                 const CircleAvatar(radius: 35),
                 const SizedBox(width: 16),
-                Column
-                (
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: 
-                  [
-                    Text
-                    (
+                  children: [
+                    Text(
                       '$username',
-                      style: const TextStyle
-                      (
+                      style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Text
-                    (
+                    const Text(
                       'Some text',
                       style: TextStyle(color: Colors.red),
                     ),
@@ -90,46 +70,30 @@ class ProfilePageState extends State<ProfilePage>
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-            
-            Row
-            (
-              children:
-              [
-                Expanded
-                (
-                  child: Card
-                  (
+            Row(
+              children: [
+                Expanded(
+                  child: Card(
                     color: Colors.pink.shade50,
-                    child: const Padding
-                    (
+                    child: const Padding(
                       padding: EdgeInsets.all(16),
-                      child: Column
-                      (
-                        children:
-                        [
+                      child: Column(
+                        children: [
                           Text('\n\n\n'),
                         ],
                       ),
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 10),
-                
-                const Expanded
-                (
-                  child: Card
-                  (
+                const Expanded(
+                  child: Card(
                     color: Colors.red,
-                    child: Padding
-                    (
+                    child: Padding(
                       padding: EdgeInsets.all(16),
-                      child: Column
-                      (
-                        children:
-                        [
+                      child: Column(
+                        children: [
                           Text('\n\n\n'),
                         ],
                       ),
@@ -138,45 +102,32 @@ class ProfilePageState extends State<ProfilePage>
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-            
-            const Text
-            (
+            const Text(
               'Actions', 
-              style: TextStyle
-              (
+              style: TextStyle(
                 fontSize: 18, fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 10),
-            
-            Card
-            (
-              child: ListTile
-              (
+            Card(
+              child: ListTile(
                 leading: const Icon(Icons.logout, color: Colors.red),
                 title: const Text('Log out'),
-                onTap: () async 
-                {
+                onTap: () async {
                   await _logOut(); 
-                  Navigator.pushAndRemoveUntil
-                  (
+                  Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (context) => const MyHomePage
-                    (
+                    MaterialPageRoute(builder: (context) => const MyHomePage(
                       title: 'MoneyTracker',
-                    ),),
+                    )),
                     (Route<dynamic> route) => false,
                   );
                 },
               ),
             ),
-            Card
-            (
-              child: ListTile
-              (
+            Card(
+              child: ListTile(
                 leading: const Icon(Icons.devices_other, color: Colors.red),
                 title: const Text('Others'),
                 onTap: () {},
@@ -185,13 +136,10 @@ class ProfilePageState extends State<ProfilePage>
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar
-      (
-        items: const 
-        [
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem
-          (
+          BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart), 
             label: 'Statistics',
           ),
@@ -200,29 +148,21 @@ class ProfilePageState extends State<ProfilePage>
         currentIndex: 2,
         selectedItemColor: Colors.purple,
         unselectedItemColor: Colors.grey,
-        onTap: (index) 
-        {
-          if (index == 0) 
-          {
-            Navigator.push
-            (
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.push(
               context,
-              MaterialPageRoute
-              (
+              MaterialPageRoute(
                 builder: (context) => const HomePage(),
               ),
             );
-          }
-          else if (index == 1)
-          {
-            /*Navigator.push
-            (
+          } else if (index == 1) {
+            Navigator.push(
               context,
-              MaterialPageRoute
-              (
-                builder: (context) => StatisticsPage(),
+              MaterialPageRoute(
+                builder: (context) => StatisticsPage(apiBaseUrl: 'http://192.168.0.103:5000'),
               ),
-            );*/
+            );
           }
         },
       ),
